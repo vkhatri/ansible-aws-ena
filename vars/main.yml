@@ -1,0 +1,6 @@
+---
+ena_download_url: "https://github.com/amzn/amzn-drivers/archive/ena_linux_{{ ena_version }}.tar.gz"
+ena_download_file: "/tmp/ena_linux_{{ ena_version }}.tar.gz"
+ena_extract_dir: "/tmp/amzn-drivers-ena_linux_{{ ena_version }}"
+ena_source_dir: "/usr/src/{{ ena_module_name }}-{{ ena_version }}"
+ena_dkms_conf_file: "/usr/src/{{ ena_module_name }}-{{ ena_version }}/dkms.conf"

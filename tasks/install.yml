@@ -1,0 +1,68 @@
+---
+- name: Check {{ ena_module_name }} Module
+  modprobe:
+    name: "{{ ena_module_name }}"
+    state: present
+  ignore_errors: yes
+  register: check_ena_module
+
+- name: Download Amazon ENA Module Source
+  get_url:
+    url: "{{ ena_download_url }}"
+    dest: "{{ ena_download_file }}"
+    mode: 0644
+  when: check_ena_module|failure
+
+- name: Extract Amazon ENA Module Source
+  unarchive:
+    src: "{{ ena_download_file }}"
+    dest: /tmp/
+    remote_src: yes
+    creates: "{{ ena_extract_dir }}/README.md"
+  when: check_ena_module|failure
+
+- name: Copy Amazon ENA Module Source
+  command: mv {{ ena_extract_dir }} {{ ena_source_dir }}
+  when: check_ena_module|failure
+
+- name: Create Amazon ENA Module Source DKMS Configuration File
+  template:
+    src: dkms.conf.j2
+    dest: "{{ ena_dkms_conf_file }}"
+    owner: root
+    group: root
+    mode: 0644
+  when: check_ena_module|failure
+
+- name: Add DKMS Amazon ENA Module Source
+  command: dkms add -m {{ ena_module_name }} -v {{ ena_version }}
+  when: check_ena_module|failure
+
+- name: Build DKMS Amazon ENA Module Source
+  command: dkms build -m {{ ena_module_name }} -v {{ ena_version }}
+  when: check_ena_module|failure
+
+- name: Install DKMS Amazon ENA Module Source
+  command: dkms install -m {{ ena_module_name }} -v {{ ena_version }}
+  when: check_ena_module|failure
+
+- name: Add Amazon ENA Module
+  command: dracut -f --add-drivers {{ ena_module_name }}
+  when: check_ena_module|failure
+
+- name: Run Module Probe
+  modprobe:
+    name: "{{ ena_module_name }}"
+    state: present
+
+- name: Search GRUB_CMDLINE_LINUX /etc/default/grub
+  shell: grep GRUB_CMDLINE_LINUX /etc/default/grub
+  register: search_grub_content
+  ignore_errors: yes
+
+- name: Update /etc/default/grub
+  replace:
+    path: /etc/default/grub
+    regexp: 'GRUB_CMDLINE_LINUX="(.*)"'
+    replace: 'GRUB_CMDLINE_LINUX="\1 net.ifnames=0"'
+  when: search_grub_content.stdout.find('net.ifnames=0') == -1
